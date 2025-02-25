@@ -5,16 +5,15 @@ page_title="Motors"
 
 [ -f /bin/motors ] || redirect_to "/" "danger" "Your camera does not seem to support motors"
 
-# read values from configs
-. $WEB_CONFIG_FILE
-
 # dump env to config if not present
 [ -z "$gpio_motor_h" ] && dump_from_env "motor"
 
 defaults() {
-	default_for motor_speed_h $motor_speed
-	default_for motor_speed_v $motor_speed
+	default_for motor_speed_h "${motor_speed:-900}"
+	default_for motor_speed_v "${motor_speed:-900}"
 	default_for motor_disable_homing "false"
+	default_for gpio_motor_invert "false"
+	default_for gpio_motor_switch "false"
 }
 
 # normalize
@@ -49,6 +48,8 @@ if [ "POST" = "$REQUEST_METHOD" ]; then
 	motor_speed_h=$POST_motor_speed_h
 	motor_speed_v=$POST_motor_speed_v
 
+	defaults
+
 	# validate
 	if [ -z "$gpio_motor_h_1" ] || [ -z "$gpio_motor_h_2" ] || \
 	   [ -z "$gpio_motor_h_3" ] || [ -z "$gpio_motor_h_4" ] || \
@@ -73,8 +74,8 @@ if [ "POST" = "$REQUEST_METHOD" ]; then
 			motor_pos_0=""
 		fi
 
-		[ -z "$motor_speed_h" ] && motor_speed_h=900
-		[ -z "$motor_speed_v" ] && motor_speed_v=900
+#		[ -z "$motor_speed_h" ] && motor_speed_h=900
+#		[ -z "$motor_speed_v" ] && motor_speed_v=900
 
 		# FIXME: deprecate after splitting to per-motor
 		[ -z "$motor_speed" ] && motor_speed=$motor_speed_h
@@ -146,8 +147,8 @@ defaults
 
 <div class="alert alert-dark ui-debug d-none">
 <h4 class="mb-3">Debug info</h4>
-<% ex "grep ^gpio_motor_ $WEB_CONFIG_FILE" %>
-<% ex "grep ^motor_ $WEB_CONFIG_FILE" %>
+<% ex "grep ^gpio_motor_ $CONFIG_FILE" %>
+<% ex "grep ^motor_ $CONFIG_FILE" %>
 <pre>
 motor_disable_homing: <%= $motor_disable_homing %>
 </pre>

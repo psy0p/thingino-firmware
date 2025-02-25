@@ -1,5 +1,8 @@
 #!/bin/sh
 
+ENV_DUMP_FILE="/tmp/environment"
+[ -f "$ENV_DUMP_FILE" ] && . "$ENV_DUMP_FILE"
+
 [ "$0" = "-sh" ] && echo "Do not run directly!" && exit 1
 
 PID=$$
@@ -12,8 +15,6 @@ CURL="curl --show-error --fail --connect-timeout 10 --max-time 30 --retry 3"
 SNAPSHOT_FILE="/tmp/snapshot.jpg"
 VBUFFER_FILE="/tmp/vbuffer.mov"
 
-debug=$(fw_printenv -n debug)
-
 build_cmd() {
 	command="$command $1"
 }
@@ -21,11 +22,6 @@ build_cmd() {
 die() {
 	log "$1"
 	quit_clean ${2:-1}
-}
-
-info() {
-	echo "$1" | log
-	is_debug_mode && echo_c 66 "$1"
 }
 
 is_debug_mode() {
@@ -50,11 +46,6 @@ log() {
 	fi
 	echo -e "$(tag) $1" >> $LOG_FILE
 	echo -e "$1" >&2
-}
-
-log_and_run() {
-	log "$1"
-	run "$1"
 }
 
 quit_clean() {
