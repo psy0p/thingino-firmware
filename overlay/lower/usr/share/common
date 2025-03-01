@@ -24,13 +24,15 @@ CURL="curl --show-error --fail --connect-timeout 10 --max-time 30 --retry 3"
 FILE_HOSTNAME="/etc/hostname"
 FILE_HOSTS="/etc/hosts"
 FILE_OS_RELEASE="/etc/os-release"
-LOG_FILE=/tmp/webui.log
+LOG_FILE="/tmp/webui.log"
 LOG_SIZE_LIMIT=50000
 NTP_DEFAULT_FILE="/etc/default/ntp.conf"
 NTP_WORKING_FILE="/tmp/ntp.conf"
 RESOLV_DEFAULT_FILE="/etc/default/resolv.conf"
 RESOLV_FILE="/etc/resolv.conf"
 RESOLV_WORKING_FILE="/tmp/resolv.conf"
+SOC_FAMILY=$(soc -f)
+SOC_MODEL=$(soc -m)
 SNAPSHOT_FILE="/tmp/snapshot.jpg"
 VBUFFER_FILE="/tmp/vbuffer.mov"
 
@@ -49,6 +51,9 @@ if [ -r "$DAEMON_CONFIG" ]; then
 	. "$DAEMON_CONFIG"
 fi
 
+die()  { echo "$1" >&2; exit 1; }
+quit() { echo "$1" >&2; exit 0; }
+
 decrement_mac() {
 	local mac last_byte_dec
 
@@ -64,20 +69,6 @@ decrement_mac() {
 		exit 1
 	fi
 	ethaddr=$(printf "%s:%02x" "${mac%:*}" "$last_byte_dec")
-}
-
-die()  { echo "$1" >&2; exit 1; }
-quit() { echo "$1" >&2; exit 0; }
-
-set_to_system() { sed -i "s/^$1=.*/$1=$2/" $SYSTEM_CONFIG; }
-
-ensure_dir() {
-	[ -d "$1" ] || mkdir -p "$1"
-}
-
-ensure_file() {
-	ensure_dir "$(dirname $1)"
-	[ -f "$1" ] || touch "$1"
 }
 
 gpio_control() {
@@ -143,14 +134,6 @@ iface_exists() {
 	fi
 }
 
-indent_output() {
-	awk '{print " "$0}'
-}
-
-is_boot_complete() {
-	[ "true" = "$boot_complete" ]
-}
-
 is_debug_mode() {
 	[ $((0 + debug)) -gt 0 ] || [ "true" = "$debug" ]
 }
@@ -167,10 +150,6 @@ is_gateway_reachable() {
 	[ -z "$iface" ] && return 1
 	ping -c 1 -W 1 -I $iface $(ip -4 route | grep $iface | grep default | awk '{print $3}') > /dev/null 2>&1 || \
 	ping -6 -c 1 -W 1 -I $iface $(ip -6 route | grep $iface | grep default | awk '{print $3}') > /dev/null 2>&1
-}
-
-is_usb_console() {
-	[ "true" = "$usb_console" ]
 }
 
 log() {
@@ -227,26 +206,23 @@ stop_daemon() {
 	if [ -f "$PIDFILE" ]; then
 		echo "- Stopping by PID from $PIDFILE"
 		start-stop-daemon -K -p $PIDFILE
-		rm "$PIDFILE"
+		[ -f "$PIDFILE" ] && rm "$PIDFILE"
 	fi
-
-	sleep 0.5
-
+	sleep 0.2
 	if pidof $DAEMON_SHORT > /dev/null; then
 		echo "- Killing by PID"
 		start-stop-daemon -K -n $DAEMON_SHORT
 	fi
-
-	sleep 0.5
-
+	sleep 0.2
 	if pidof $DAEMON_SHORT > /dev/null; then
 		echo "- Killing by name"
 		start-stop-daemon -K -s SIGKILL -n $DAEMON_SHORT
 	fi
-}
-
-stop_daemon_process() {
-	start-stop-daemon -K -x $DAEMON_FULL 2>&1
+	sleep 0.2
+	if pidof $DAEMON_SHORT > /dev/null; then
+		echo "- Killing by full process name"
+		start-stop-daemon -K -x $DAEMON_FULL
+	fi
 }
 
 stopping() {
@@ -259,9 +235,4 @@ tag() {
 
 ts() {
 	date +"%F %T"
-}
-
-# "template"
-parse_target() {
-	echo "$1" | sed "s/%hostname/$(hostname -s)/g"
 }
