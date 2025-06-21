@@ -2,12 +2,17 @@
 . ./_json.sh
 
 # parse parameters from query string
-[ -n "$QUERY_STRING" ] && eval $(echo "$QUERY_STRING" | sed "s/&/;/g")
+if [ -n "$QUERY_STRING" ]; then
+	eval $(echo "$QUERY_STRING" | sed "s/&/;/g")
+fi
 
-[ -z "$state" ] && json_error "Missing mandatory parameter: state"
-[ -z "$iface" ] && iface="wg0"
+if [ -z "$state" ]; then
+	json_error "Missing mandatory parameter: state"
+fi
 
-WG_CTL="/etc/init.d/S42wireguard"
+if [ -z "$iface" ]; then
+	iface="wg0"
+fi
 
 is_wg_up() {
 	ip link show $iface | grep -q UP
@@ -18,9 +23,9 @@ wg_status() {
 }
 
 if [ "true" = "$wg_enabled" ] ; then
-	is_wg_up || $WG_CTL force
+	is_wg_up || service force wireguard
 else
-	is_wg_up && $WG_CTL stop
+	is_wg_up && service stop wireguard
 fi
 
-json_ok "WireGuarde service is $(wg_status)."
+json_ok "WireGuard service is $(wg_status)"

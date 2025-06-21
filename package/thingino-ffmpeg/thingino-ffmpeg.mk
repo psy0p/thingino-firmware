@@ -1,8 +1,12 @@
-THINGINO_FFMPEG_VERSION = 7.1
+THINGINO_FFMPEG_VERSION = 7.1.1
 THINGINO_FFMPEG_SOURCE = ffmpeg-$(THINGINO_FFMPEG_VERSION).tar.xz
 THINGINO_FFMPEG_SITE = http://ffmpeg.org/releases
 
+ifeq ($(BR2_PACKAGE_THINGINO_FFMPEG_LIGHTNVR),y)
+THINGINO_FFMPEG_INSTALL_STAGING = YES
+else
 THINGINO_FFMPEG_INSTALL_STAGING = NO
+endif
 
 THINGINO_FFMPEG_LICENSE = LGPL-2.1+, libjpeg license
 THINGINO_FFMPEG_LICENSE_FILES = LICENSE.md COPYING.LGPLv2.1
@@ -48,7 +52,57 @@ THINGINO_FFMPEG_CONF_OPTS = \
 	--extra-cxxflags="-Os -flto-partition=none" \
 	--extra-ldflags="-z max-page-size=0x1000 -flto-partition=none -Wl,--gc-sections"
 
+# Override with lightnvr-specific options if that package is selected
+ifeq ($(BR2_PACKAGE_THINGINO_FFMPEG_LIGHTNVR),y)
+THINGINO_FFMPEG_CONF_OPTS = \
+	--prefix=/usr \
+	--enable-mipsfpu \
+	--disable-asm \
+	--enable-cross-compile \
+	--disable-everything \
+	--enable-small \
+	--enable-shared \
+	--enable-gpl \
+	--enable-version3 \
+	--enable-avformat \
+	--enable-avcodec \
+	--enable-swscale \
+	--enable-network \
+	--enable-protocol=http,tcp,udp,file,rtsp,rtp \
+	--enable-parser=h264,hevc,aac,opus \
+	--enable-demuxer=rtsp,rtp,mov,m4a,mpegts,h264,rawvideo \
+	--enable-muxer=mp4,opus,mpegts,hls,segment,image2,png,mjpeg \
+	--enable-encoder=png,mjpeg \
+	--enable-decoder=h264,aac,hevc,rawvideo \
+	--enable-filter=scale \
+	--enable-bsf=aac_adtstoasc,h264_mp4toannexb,hevc_mp4toannexb \
+	--disable-static \
+	--disable-cuda \
+	--disable-cuda-llvm \
+	--disable-doc \
+	--disable-podpages \
+	--disable-htmlpages \
+	--disable-manpages \
+	--disable-txtpages \
+	--disable-iconv \
+	--disable-zlib \
+	--disable-avdevice \
+	--disable-postproc \
+	--disable-debug \
+	--disable-runtime-cpudetect \
+	--disable-swresample \
+	--extra-cflags="-Os" \
+	--extra-cxxflags="-Os" \
+	--extra-cflags="-Os -flto-partition=none" \
+	--extra-cxxflags="-Os -flto-partition=none" \
+	--extra-ldflags="-z max-page-size=0x1000 -flto-partition=none -Wl,--gc-sections"
+endif
+
+ifeq ($(BR2_PACKAGE_THINGINO_FFMPEG_LIGHTNVR),y)
+THINGINO_FFMPEG_DEPENDENCIES += host-pkgconf
+else
 THINGINO_FFMPEG_DEPENDENCIES += host-pkgconf host-upx
+endif
 
 # Default to --cpu=generic for MIPS architecture, in order to avoid a
 # warning from ffmpeg's configure script.
@@ -97,7 +151,8 @@ define THINGINO_FFMPEG_UPX_INSTALL
 		$(HOST_DIR)/bin/upx --best --lzma $(TARGET_DIR)/usr/bin/ffmpeg
 endef
 
+ifneq ($(BR2_PACKAGE_THINGINO_FFMPEG_LIGHTNVR),y)
 THINGINO_FFMPEG_POST_INSTALL_TARGET_HOOKS += THINGINO_FFMPEG_UPX_INSTALL
-
+endif
 
 $(eval $(autotools-package))

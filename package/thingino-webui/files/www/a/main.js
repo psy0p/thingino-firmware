@@ -65,7 +65,11 @@ function heartbeat() {
 		.then((response) => response.json())
 		.then((json) => {
 			if (json.time_now !== '') {
-				let options = {hour: "2-digit", minute: "2-digit", timeZone: json.timezone.replaceAll(' ', '_')};
+				let options = {
+					hour: "2-digit",
+					minute: "2-digit"
+					//, timeZone: json.timezone?.replaceAll(' ', '_')
+				};
 				const d = new Date(json.time_now * 1000);
 				$('#time-now').textContent = d.toDateString() + ' ' + d.toLocaleString(navigator.language, options) + ' ' + json.timezone;
 			}
@@ -180,6 +184,17 @@ function initCopyToClipboard() {
 
 // set links to external resources to open in a new window.
 		$$('a[href^=http]').forEach(el => el.target = '_blank');
+
+// handle sendto buttons
+		$$("button[data-sendto]").forEach(el => {
+			el.onclick = (ev) => {
+				ev.preventDefault();
+				if (!confirm("Are you sure?")) return false;
+				fetch("/x/send.cgi?" + new URLSearchParams({'to': el.dataset.sendto}).toString())
+					.then(res => res.json())
+					.then(data => console.log(data))
+			}
+		});
 
 // async output of a command running on camera
 		if ($('pre#output[data-cmd]')) {

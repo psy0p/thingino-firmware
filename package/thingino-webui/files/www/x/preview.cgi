@@ -97,16 +97,6 @@ for i in email ftp mqtt telegram webhook yadisk; do
 }
 <% done %>
 
-$$("button[data-sendto]").forEach(el => {
-	el.onclick = (ev) => {
-		ev.preventDefault();
-		if (!confirm("Are you sure?")) return false;
-		fetch("/x/send.cgi?" + new URLSearchParams({'to': el.dataset.sendto}).toString())
-		.then(res => res.json())
-		.then(data => console.log(data))
-	}
-});
-
 const preview = $("#preview");
 preview.onload = function() { URL.revokeObjectURL(this.src) }
 
@@ -121,7 +111,10 @@ function updatePreview(data) {
 	ws.send('{"action":{"capture":null}}');
 }
 
-let ws = new WebSocket(`//${document.location.hostname}:8089?token=<%= $ws_token %>`);
+const wsPort = location.protocol === "https:" ? 8090 : 8089;
+const wsProto = location.protocol === "https:" ? "wss:" : "ws:";
+let ws = new WebSocket(`${wsProto}//${document.location.hostname}:${wsPort}?token=<%= $ws_token %>`);
+
 ws.onopen = () => {
 	console.log('WebSocket connection opened');
 	ws.binaryType = 'arraybuffer';
@@ -135,13 +128,19 @@ ws.onopen = () => {
 	console.log(ts(), '===>', payload);
 	ws.send(payload);
 }
-ws.onclose = () => { console.log('WebSocket connection closed'); }
-ws.onerror = (err) => { console.error('WebSocket error', err); }
+ws.onclose = () => {
+	console.log('WebSocket connection closed');
+	ws = null;
+}
+ws.onerror = (err) => {
+	console.error('WebSocket error', err);
+	ws.close();
+}
 ws.onmessage = (ev) => {
 	if (typeof ev.data == 'string') {
 		if (ev.data == '') {
-			console.log('Empty response')
-			return
+			console.log('Empty response');
+			return;
 		}
 		if (ev.data == '{"action":{"capture":"initiated"}}') {
 			return;
@@ -194,13 +193,13 @@ async function toggleDayNight(mode = 'read') {
 	await fetch(url)
 		.then(res => res.json())
 		.then(data => {
-			 console.log(data.message)
-			 $('#daynight').checked = (data.message.daynight == 'night')
-			 if ($('#ir850')) $('#ir850').checked = (data.message.ir850 == 1)
-			 if ($('#ir940')) $('#ir940').checked = (data.message.ir940 == 1)
-			 if ($('#white')) $('#white').checked = (data.message.white == 1)
-			 if ($('#ircut')) $('#ircut').checked = (data.message.ircut == 1)
-			 if ($('#color')) $('#color').checked = (data.message.color == 1)
+			console.log(data.message)
+			$('#daynight').checked = (data.message.daynight == 'night')
+			if ($('#ir850')) $('#ir850').checked = (data.message.ir850 == 1)
+			if ($('#ir940')) $('#ir940').checked = (data.message.ir940 == 1)
+			if ($('#white')) $('#white').checked = (data.message.white == 1)
+			if ($('#ircut')) $('#ircut').checked = (data.message.ircut == 1)
+			if ($('#color')) $('#color').checked = (data.message.color == 1)
 		})
 }
 

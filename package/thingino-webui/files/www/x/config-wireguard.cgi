@@ -1,7 +1,9 @@
 #!/bin/haserl
 <%in _common.cgi %>
 <%
-[ -f /bin/wg ] || redirect_to "/" "danger" "Your camera does not seem to support WireGuard"
+if [ ! -f "/bin/wg" ]; then
+	redirect_to "/" "danger" "Your camera does not seem to support WireGuard"
+fi
 
 page_title="WireGuard VPN"
 
@@ -40,8 +42,10 @@ wireguard_peerpub=\"$wireguard_peerpub\"
 wireguard_port=\"$wireguard_port\"
 wireguard_privkey=\"$wireguard_privkey\"
 "
+		redirect_to $SCRIPT_NAME "success" "Data updated."
+	else
+		redirect_to $SCRIPT_NAME "danger" "Error: $error"
 	fi
-	redirect_to $SCRIPT_NAME
 fi
 
 defaults

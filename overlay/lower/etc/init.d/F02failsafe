@@ -1,12 +1,7 @@
 #!/bin/sh
 
-ENV_DUMP_FILE="/tmp/environment"
-[ -f "$ENV_DUMP_FILE" ] && . "$ENV_DUMP_FILE"
+. /usr/share/common
 
-CONFIG_FILE="/etc/web.conf"
-[ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE"
-
-OS_RELEASE_FILE="/etc/os-release"
 USB_SCRIPT="/etc/init.d/F02failsafe-usb"
 
 start() {

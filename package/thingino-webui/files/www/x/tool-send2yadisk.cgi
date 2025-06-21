@@ -23,8 +23,10 @@ yadisk_username=\"$yadisk_username\"
 yadisk_password=\"$yadisk_password\"
 yadisk_path=\"$yadisk_path\"
 "
+		redirect_to $SCRIPT_NAME "success" "Data updated."
+	else
+		redirect_to $SCRIPT_NAME "danger" "Error: $error"
 	fi
-	redirect_to $SCRIPT_NAME
 fi
 
 defaults
@@ -50,6 +52,8 @@ Learn how to create it on <a href="https://yandex.com/support/id/authorization/a
 </div>
 <% button_submit %>
 </form>
+
+<button type="button" class="btn btn-bark border mb-2" title="Yandex Disk" data-sendto="yadisk">Test</button>
 
 <div class="alert alert-dark ui-debug d-none">
 <h4 class="mb-3">Debug info</h4>

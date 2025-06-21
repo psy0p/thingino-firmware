@@ -11,8 +11,9 @@ else
 	PRUDYNT_T_VERSION = $(shell git ls-remote $(PRUDYNT_T_SITE) $(PRUDYNT_T_SITE_BRANCH) | head -1 | cut -f1)
 endif
 
+PRUDYNT_T_GIT_SUBMODULES = YES
 
-PRUDYNT_T_DEPENDENCIES = libconfig thingino-live555 thingino-fonts ingenic-lib faac thingino-opus
+PRUDYNT_T_DEPENDENCIES = libconfig thingino-live555 thingino-fonts ingenic-lib faac thingino-opus libhelix-aac
 ifeq ($(BR2_PACKAGE_PRUDYNT_T_NG),y)
 	PRUDYNT_T_DEPENDENCIES += libwebsockets libschrift
 else
@@ -20,6 +21,14 @@ else
 endif
 ifeq ($(BR2_TOOLCHAIN_USES_MUSL),y)
 	PRUDYNT_T_DEPENDENCIES += ingenic-musl
+endif
+
+ifeq ($(BR2_TOOLCHAIN_USES_GLIBC),y)
+	PRUDYNT_CFLAGS += -DLIBC_GLIBC
+endif
+
+ifeq ($(BR2_TOOLCHAIN_USES_UCLIBC),y)
+	PRUDYNT_CFLAGS += -DLIBC_UCLIBC
 endif
 
 PRUDYNT_CFLAGS += -DPLATFORM_$(shell echo $(SOC_FAMILY) | tr a-z A-Z)
@@ -54,26 +63,45 @@ define PRUDYNT_T_BUILD_CMDS
 endef
 
 define PRUDYNT_T_INSTALL_TARGET_CMDS
-	$(INSTALL) -m 0755 -D $(@D)/bin/prudynt $(TARGET_DIR)/usr/bin/prudynt
+	$(INSTALL) -D -m 0755 $(@D)/bin/prudynt \
+		$(TARGET_DIR)/usr/bin/prudynt
+
 	awk -f $(PRUDYNT_T_PKGDIR)/files/device_presets \
 		$(PRUDYNT_T_PKGDIR)/files/configs/$(shell awk 'BEGIN {split("$(BR2_CONFIG)", a, "/"); print a[length(a)-1]}') \
 		$(@D)/prudynt.cfg.example > $(STAGING_DIR)/prudynt.cfg
-	$(INSTALL) -m 0644 -D $(STAGING_DIR)/prudynt.cfg $(TARGET_DIR)/etc/prudynt.cfg
+
+	$(INSTALL) -D -m 0644 $(STAGING_DIR)/prudynt.cfg \
+		$(TARGET_DIR)/etc/prudynt.cfg
+
 	sed -i 's/;.*$$/;/' $(TARGET_DIR)/etc/prudynt.cfg
-	$(INSTALL) -m 0755 -D $(PRUDYNT_T_PKGDIR)/files/S95prudynt $(TARGET_DIR)/etc/init.d/S95prudynt
-	$(INSTALL) -m 0755 -D $(PRUDYNT_T_PKGDIR)/files/S96record $(TARGET_DIR)/etc/init.d/S96record
-	$(INSTALL) -m 0755 -D $(PRUDYNT_T_PKGDIR)/files/S96vbuffer $(TARGET_DIR)/etc/init.d/S96vbuffer
-	$(INSTALL) -m 0755 -D $(PRUDYNT_T_PKGDIR)/files/record $(TARGET_DIR)/usr/sbin/record
-	$(INSTALL) -d -m 0755 $(TARGET_DIR)/usr/share/images
-	$(INSTALL) -m 0644 -D $(@D)/res/thingino_logo_1.bgra $(TARGET_DIR)/usr/share/images/thingino_logo_1.bgra
-	$(INSTALL) -m 0644 -D $(@D)/res/thingino_logo_2.bgra $(TARGET_DIR)/usr/share/images/thingino_logo_2.bgra
-	if echo "$(SOC_RAM)" | grep -q "64" && ! echo "$(SOC_FAMILY)" | grep -Eq "t23"; then \
-		sed -i 's/^\([ \t]*\)# *buffers: 2;/\1buffers: 1;/' $(TARGET_DIR)/etc/prudynt.cfg; \
-	fi
+
+    if [ "$(SOC_RAM)" -le "64" ]; then \
+    sed -i 's/^\([ \t]*\)# *buffers: 2;/\1buffers: 1;/' $(TARGET_DIR)/etc/prudynt.cfg; \
+    fi
+
 	awk '{if(NR>1){gsub(/^[[:space:]]*/,"");if(match($$0,"^[[:space:]]*#")){$$0=""}}}{if(length($$0)){if(NR>1)printf("%s",$$0);else print $$0;}}' \
 		$(PRUDYNT_T_PKGDIR)/files/prudyntcfg.awk > $(PRUDYNT_T_PKGDIR)/files/prudyntcfg
-	$(INSTALL) -m 0755 -D $(PRUDYNT_T_PKGDIR)/files/prudyntcfg $(TARGET_DIR)/usr/bin/prudyntcfg
+
+	$(INSTALL) -D -m 0755 $(PRUDYNT_T_PKGDIR)/files/prudyntcfg \
+		$(TARGET_DIR)/usr/bin/prudyntcfg
+
 	rm $(PRUDYNT_T_PKGDIR)/files/prudyntcfg
+
+	$(INSTALL) -D -m 0755 $(PRUDYNT_T_PKGDIR)/files/S95prudynt \
+		$(TARGET_DIR)/etc/init.d/S95prudynt
+
+	$(INSTALL) -D -m 0755 $(PRUDYNT_T_PKGDIR)/files/S96record \
+		$(TARGET_DIR)/etc/init.d/S96record
+
+	$(INSTALL) -D -m 0755 $(PRUDYNT_T_PKGDIR)/files/S96vbuffer \
+		$(TARGET_DIR)/etc/init.d/S96vbuffer
+
+	$(INSTALL) -D -m 0644 $(@D)/res/thingino_logo_1.bgra \
+		$(TARGET_DIR)/usr/share/images/thingino_logo_1.bgra
+
+	$(INSTALL) -D -m 0644 $(@D)/res/thingino_logo_2.bgra \
+		$(TARGET_DIR)/usr/share/images/thingino_logo_2.bgra
+
 #	if [ "$(BR2_PACKAGE_PRUDYNT_T_NG)" = "y" ]; then \
 #	echo "Removing LD_PRELOAD command line from init script"; \
 #	sed -i '/^COMMAND=/d' $(TARGET_DIR)/etc/init.d/S95prudynt; \
